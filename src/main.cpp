@@ -1,7 +1,10 @@
 #include <iostream>
+#include "Exercise.h"
 
 int main()
 {
-    std::cout << "Fitness Tracker v0.1" << std::endl;
+    Exercise ex(1, "2026-05-08", "Bench Press", "Chest", ExerciseType::STRENGTH);
+    std::cout << ex << std::endl;
+    std::cout << ex.serialize() << std::endl;
     return 0;
 }
