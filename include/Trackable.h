@@ -17,11 +17,13 @@ public:
     virtual int getId() const = 0;
     virtual std::string serialize() const;
 
+    // Public convenience: return createdAt as a string for consumers
+    std::string getCreatedAt() const;
+
     friend std::ostream &operator<<(std::ostream &os, const Trackable &t);
 
 protected:
     int getRawId() const;
-    const std::string &getCreatedAt() const;
 };
 
 #endif

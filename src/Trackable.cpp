@@ -8,7 +8,7 @@ int Trackable::getRawId() const
     return id;
 }
 
-const std::string &Trackable::getCreatedAt() const
+std::string Trackable::getCreatedAt() const
 {
     return createdAt;
 }
