@@ -202,6 +202,24 @@ UserProfile FileManager::load(const std::string &name) const
     return up;
 }
 
+#include <filesystem>
+
+std::vector<std::string> FileManager::listProfiles() const
+{
+    std::vector<std::string> names;
+    if (!std::filesystem::exists(directory))
+        return names;
+
+    for (const auto &entry : std::filesystem::directory_iterator(directory))
+    {
+        if (entry.path().extension() == ".txt")
+        {
+            names.push_back(entry.path().stem().string());
+        }
+    }
+    return names;
+}
+
 std::ostream &operator<<(std::ostream &os, const FileManager &fm)
 {
     os << "[FileManager] directory: " << fm.directory;

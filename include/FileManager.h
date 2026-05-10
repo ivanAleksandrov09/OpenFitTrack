@@ -24,6 +24,7 @@ public:
     void save(const UserProfile &up) const;
     UserProfile load(const std::string &name) const;
     bool exists(const std::string &name) const;
+    std::vector<std::string> listProfiles() const;
 
     friend std::ostream &operator<<(std::ostream &os, const FileManager &fm);
 };
