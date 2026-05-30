@@ -70,6 +70,25 @@ void FileManager::saveWorkouts(std::ofstream &file, const UserProfile &up) const
     }
 }
 
+void FileManager::saveRoutines(std::ofstream &file, const UserProfile &up) const
+{
+    file << up.routines.size() << "\n";
+    for (const auto &r : up.routines)
+    {
+        file << r.getId() << "\n"
+             << r.getName() << "\n";
+
+        const auto &entries = r.getEntries();
+        file << entries.size() << "\n";
+        for (const auto &re : entries)
+        {
+            file << re.exercise.getId() << "\n"
+                 << re.sets << "\n"
+                 << re.defaultRestSec << "\n";
+        }
+    }
+}
+
 void FileManager::save(const UserProfile &up) const
 {
     std::ofstream file(profilePath(up.name));
@@ -86,6 +105,7 @@ void FileManager::save(const UserProfile &up) const
 
     saveExercises(file, up);
     saveWorkouts(file, up);
+    saveRoutines(file, up);
 
     std::cout << "Profile saved: " << profilePath(up.name) << "\n";
 }
@@ -162,6 +182,41 @@ void FileManager::loadWorkouts(std::ifstream &file, UserProfile &up, int count) 
     }
 }
 
+void FileManager::loadRoutines(std::ifstream &file, UserProfile &up, int count) const
+{
+    for (int i = 0; i < count; i++)
+    {
+        int id;
+        std::string name;
+
+        file >> id;
+        file.ignore();
+        std::getline(file, name);
+
+        Routine r(id, name);
+
+        int entryCount;
+        file >> entryCount;
+        file.ignore();
+        for (int j = 0; j < entryCount; j++)
+        {
+            int exerciseId, sets, defaultRestSec;
+            file >> exerciseId;
+            file.ignore();
+            file >> sets;
+            file.ignore();
+            file >> defaultRestSec;
+            file.ignore();
+
+            Exercise *e = up.findExercise(exerciseId);
+            if (e)
+                r.addExercise(*e, sets, defaultRestSec);
+        }
+
+        up.routines.push_back(r);
+    }
+}
+
 UserProfile FileManager::load(const std::string &name) const
 {
     std::ifstream file(profilePath(name));
@@ -185,7 +240,7 @@ UserProfile FileManager::load(const std::string &name) const
     UserProfile up(id, loadedName, age);
     up.nextId = nextId;
 
-    int exerciseCount, workoutCount;
+    int exerciseCount, workoutCount, routineCount;
     file >> exerciseCount;
     file.ignore();
     loadExercises(file, up, exerciseCount);
@@ -193,6 +248,10 @@ UserProfile FileManager::load(const std::string &name) const
     file >> workoutCount;
     file.ignore();
     loadWorkouts(file, up, workoutCount);
+
+    file >> routineCount;
+    file.ignore();
+    loadRoutines(file, up, routineCount);
 
     // regenerate PRs from loaded workouts
     for (const auto &w : up.workouts)

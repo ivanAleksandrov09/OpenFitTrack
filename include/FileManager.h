@@ -14,9 +14,11 @@ private:
     void saveExercises(std::ofstream &file, const UserProfile &up) const;
     void saveWorkouts(std::ofstream &file, const UserProfile &up) const;
     void savePRs(std::ofstream &file, const UserProfile &up) const;
+    void saveRoutines(std::ofstream &file, const UserProfile &up) const;
 
     void loadExercises(std::ifstream &file, UserProfile &up, int count) const;
     void loadWorkouts(std::ifstream &file, UserProfile &up, int count) const;
+    void loadRoutines(std::ifstream &file, UserProfile &up, int count) const;
 
 public:
     explicit FileManager(const std::string &directory = "data");
