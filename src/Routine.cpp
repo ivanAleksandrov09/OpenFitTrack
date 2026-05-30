@@ -29,7 +29,8 @@ std::ostream &operator<<(std::ostream &os, const Routine &r)
     os << "[Routine #" << r.id << "] " << r.name << "\n";
     for (const auto &re : r.entries)
     {
-        os << "  " << re.exercise.getName()
+        os << "[" << re.exercise.getId() << "]"
+           << "  " << re.exercise.getName()
            << " - " << re.sets << " sets"
            << " | rest: " << re.defaultRestSec << "s\n";
     }

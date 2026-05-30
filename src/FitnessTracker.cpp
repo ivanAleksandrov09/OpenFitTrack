@@ -276,6 +276,182 @@ void FitnessTracker::actionAddSetToWorkout()
     std::cout << "Set added.\n";
 }
 
+// ── Routine actions ───────────────────────────────────────────────────────────────
+
+void FitnessTracker::actionListRoutines()
+{
+    const auto &routines = activeProfile->getRoutines();
+    if (routines.empty())
+    {
+        std::cout << "No routines yet.\n";
+        return;
+    }
+    printSeparator();
+    for (const auto &r : routines)
+        std::cout << "  [#" << r.getId() << "] " << r.getName()
+                  << " - " << r.getEntries().size() << " exercises\n";
+    printSeparator();
+}
+
+void FitnessTracker::actionViewRoutine()
+{
+    actionListRoutines();
+    int id = promptInt("Routine ID to view: ");
+    Routine *r = activeProfile->findRoutine(id);
+    if (!r)
+    {
+        std::cout << "Not found.\n";
+        return;
+    }
+    std::cout << *r << "\n";
+}
+
+void FitnessTracker::actionCreateRoutine()
+{
+    std::string name = promptString("Routine name: ");
+    Routine &r = activeProfile->addRoutine(name);
+    std::cout << "Routine created: #" << r.getId() << " " << r.getName() << "\n";
+
+    while (true)
+    {
+        actionListExercises();
+        std::cout << "  0. Done adding exercises\n";
+        int eId = promptInt("Exercise ID to add (0 to finish): ");
+        if (eId == 0)
+            break;
+
+        Exercise *e = activeProfile->findExercise(eId);
+        if (!e)
+        {
+            std::cout << "Exercise not found.\n";
+            continue;
+        }
+
+        int sets = promptInt("Number of sets: ");
+        int restSec = promptInt("Default rest (seconds): ");
+
+        activeProfile->addExerciseToRoutine(r.getId(), eId, sets, restSec);
+        std::cout << "  Added: " << e->getName()
+                  << " x" << sets << " sets | rest: " << restSec << "s\n";
+    }
+
+    std::cout << "\nRoutine saved:\n"
+              << r << "\n";
+}
+
+void FitnessTracker::actionRemoveRoutine()
+{
+    actionListRoutines();
+    int id = promptInt("Routine ID to remove: ");
+
+    Routine *r = activeProfile->findRoutine(id);
+    if (!r)
+    {
+        std::cout << "Not found\n";
+        return;
+    }
+
+    activeProfile->removeRoutine(id);
+    std::cout << "Removed routine #" << id << "\n";
+}
+
+void FitnessTracker::actionAddExerciseToRoutine()
+{
+    actionListRoutines();
+    int rId = promptInt("Routine ID: ");
+    Routine *r = activeProfile->findRoutine(rId);
+    if (!r)
+    {
+        std::cout << "Not found.\n";
+        return;
+    }
+
+    actionListExercises();
+    int eId = promptInt("Exercise ID: ");
+    Exercise *e = activeProfile->findExercise(eId);
+    if (!e)
+    {
+        std::cout << "Not found.\n";
+        return;
+    }
+
+    int sets = promptInt("Number of sets: ");
+    int restSec = promptInt("Default rest (seconds): ");
+
+    activeProfile->addExerciseToRoutine(rId, eId, sets, restSec);
+    std::cout << "Added " << e->getName() << " to " << r->getName() << "\n";
+}
+
+void FitnessTracker::actionRemoveExerciseFromRoutine()
+{
+    actionListRoutines();
+    int rId = promptInt("Routine ID: ");
+    Routine *r = activeProfile->findRoutine(rId);
+    if (!r)
+    {
+        std::cout << "Not found.\n";
+        return;
+    }
+
+    std::cout << *r << "\n";
+    int eId = promptInt("Exercise ID to remove: ");
+
+    Exercise *e = activeProfile->findExercise(eId);
+    if (!e)
+    {
+        std::cout << "Not found.\n";
+        return;
+    }
+
+    activeProfile->removeExerciseFromRoutine(rId, eId);
+    std::cout << "Removed exercise #" << eId << " from routine.\n";
+}
+
+void FitnessTracker::menuRoutines()
+{
+    while (true)
+    {
+        printSeparator('=');
+        std::cout << "  Routines\n";
+        printSeparator();
+        std::cout << "  1. List routines\n";
+        std::cout << "  2. View routine\n";
+        std::cout << "  3. Create routine\n";
+        std::cout << "  4. Add exercise to routine\n";
+        std::cout << "  5. Remove exercise from routine\n";
+        std::cout << "  6. Remove routine\n";
+        std::cout << "  0. Back\n";
+        printSeparator('=');
+
+        int choice = promptInt("> ");
+        switch (choice)
+        {
+        case 1:
+            actionListRoutines();
+            break;
+        case 2:
+            actionViewRoutine();
+            break;
+        case 3:
+            actionCreateRoutine();
+            break;
+        case 4:
+            actionAddExerciseToRoutine();
+            break;
+        case 5:
+            actionRemoveExerciseFromRoutine();
+            break;
+        case 6:
+            actionRemoveRoutine();
+            break;
+        case 0:
+            return;
+        default:
+            std::cout << "Invalid option.\n";
+        }
+    }
+}
+
 // ── Progress ───────────────────────────────────────────────────────────────
 
 void FitnessTracker::menuProgress()
@@ -438,10 +614,11 @@ void FitnessTracker::menuMain()
         printSeparator();
         std::cout << "  1. Exercises\n";
         std::cout << "  2. Workouts\n";
-        std::cout << "  3. Progress\n";
-        std::cout << "  4. Weekly summary\n";
-        std::cout << "  5. Switch profile\n";
-        std::cout << "  6. Save\n";
+        std::cout << "  3. Routines\n";
+        std::cout << "  4. Progress\n";
+        std::cout << "  5. Weekly summary\n";
+        std::cout << "  6. Switch profile\n";
+        std::cout << "  7. Save\n";
         std::cout << "  0. Exit\n";
         printSeparator('=');
 
@@ -462,15 +639,18 @@ void FitnessTracker::menuMain()
             menuWorkouts();
             break;
         case 3:
-            menuProgress();
+            menuRoutines();
             break;
         case 4:
-            menuWeeklySummary();
+            menuProgress();
             break;
         case 5:
-            actionSwitchProfile();
+            menuWeeklySummary();
             break;
         case 6:
+            actionSwitchProfile();
+            break;
+        case 7:
             fileManager.save(*activeProfile);
             break;
         case 0:

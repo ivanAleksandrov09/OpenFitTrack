@@ -32,6 +32,15 @@ private:
     void actionViewWorkout();
     void actionAddSetToWorkout();
 
+    // routine actions
+    void menuRoutines();
+    void actionListRoutines();
+    void actionCreateRoutine();
+    void actionRemoveRoutine();
+    void actionAddExerciseToRoutine();
+    void actionRemoveExerciseFromRoutine();
+    void actionViewRoutine();
+
     // profile actions
     void actionSwitchProfile();
     void actionCreateProfile();
