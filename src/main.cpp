@@ -1,19 +1,18 @@
-#include "FitnessTracker.h"
-#include "Routine.h"
 #include <iostream>
-
-// FitnessTracker tracker;
-// tracker.run();
+#include "UserProfile.h"
 
 int main()
 {
-    Exercise bench(1, "2026-05-08", "Bench Press", "Chest", ExerciseType::STRENGTH);
-    Exercise squat(2, "2026-05-08", "Squat", "Legs", ExerciseType::STRENGTH);
+    UserProfile user(1, "Alex", 22);
+    user.addExercise("Bench Press", "Chest", ExerciseType::STRENGTH);
+    user.addExercise("Squat", "Legs", ExerciseType::STRENGTH);
 
-    Routine r(1, "Push/Pull A");
-    r.addExercise(bench, 3, 90);
-    r.addExercise(squat, 4, 120);
+    user.addRoutine("Push Day");
+    user.addExerciseToRoutine(3, 1, 3, 90);  // 3 sets, 90s rest
+    user.addExerciseToRoutine(3, 2, 4, 120); // 4 sets, 120s rest
 
-    std::cout << r << "\n";
+    for (const auto &r : user.getRoutines())
+        std::cout << r << "\n";
+
     return 0;
 }

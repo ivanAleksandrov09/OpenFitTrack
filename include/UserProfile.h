@@ -4,6 +4,7 @@
 #include "Workout.h"
 #include "PersonalRecord.h"
 #include "Exercise.h"
+#include "Routine.h"
 #include <vector>
 #include <string>
 #include <map>
@@ -30,6 +31,7 @@ private:
     std::vector<Workout> workouts;
     std::vector<Exercise> exercises;
     std::vector<PersonalRecord> prs;
+    std::vector<Routine> routines;
     int nextId;
 
     friend class FileManager;
@@ -74,6 +76,14 @@ public:
     // weekly summary
     WeeklySummary getWeeklySummary(const std::string &weekStart,
                                    const std::string &weekEnd) const;
+
+    // routine management
+    Routine &addRoutine(const std::string &name);
+    void removeRoutine(int routineId);
+    Routine *findRoutine(int routineId);
+    const std::vector<Routine> &getRoutines() const;
+    void addExerciseToRoutine(int routineId, int exerciseId, int sets, int defaultRestSec);
+    void removeExerciseFromRoutine(int routineId, int exerciseId);
 
     friend std::ostream &operator<<(std::ostream &os, const UserProfile &up);
     friend std::istream &operator>>(std::istream &is, UserProfile &up);
