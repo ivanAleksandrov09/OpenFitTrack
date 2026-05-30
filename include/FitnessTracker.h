@@ -40,6 +40,7 @@ private:
     void actionAddExerciseToRoutine();
     void actionRemoveExerciseFromRoutine();
     void actionViewRoutine();
+    void actionStartWorkoutFromRoutine();
 
     // profile actions
     void actionSwitchProfile();
@@ -47,6 +48,7 @@ private:
 
     // helpers
     int promptInt(const std::string &prompt);
+    int promptIntDefault(const std::string &prompt, int defaultVal);
     float promptFloat(const std::string &prompt);
     std::string promptString(const std::string &prompt);
     std::string promptDate(const std::string &prompt);

@@ -39,6 +39,24 @@ int FitnessTracker::promptInt(const std::string &prompt)
     }
 }
 
+int FitnessTracker::promptIntDefault(const std::string &prompt, int defaultVal)
+{
+    std::string input;
+    std::cout << prompt;
+    std::getline(std::cin, input);
+    if (input.empty())
+        return defaultVal;
+    try
+    {
+        return std::stoi(input);
+    }
+    catch (...)
+    {
+        std::cout << "Invalid input, using default: " << defaultVal << "\n";
+        return defaultVal;
+    }
+}
+
 float FitnessTracker::promptFloat(const std::string &prompt)
 {
     float val;
@@ -407,6 +425,71 @@ void FitnessTracker::actionRemoveExerciseFromRoutine()
     std::cout << "Removed exercise #" << eId << " from routine.\n";
 }
 
+void FitnessTracker::actionStartWorkoutFromRoutine()
+{
+    actionListRoutines();
+    int rId = promptInt("Routine ID: ");
+    Routine *routine = activeProfile->findRoutine(rId);
+    if (!routine)
+    {
+        std::cout << "Not found.\n";
+        return;
+    }
+
+    std::string date = promptDate("Date (YYYY-MM-DD): ");
+    int duration = promptInt("Estimated duration (minutes): ");
+    std::string notes = promptString("Notes (optional): ");
+
+    Workout &w = activeProfile->addWorkout(date, duration, notes);
+    int wId = w.getId();
+
+    printSeparator('=');
+    std::cout << "Starting: " << routine->getName() << "\n";
+
+    for (const auto &re : routine->getEntries())
+    {
+        printSeparator();
+        std::cout << "  " << re.exercise.getName()
+                  << " — " << re.sets << " sets\n";
+        printSeparator();
+
+        for (int i = 1; i <= re.sets; i++)
+        {
+            std::cout << "  Set " << i << ":\n";
+
+            int reps = promptInt("    Reps: ");
+            float weight = promptFloat("    Weight (kg): ");
+            int rest = promptIntDefault(
+                "    Rest (s) [" + std::to_string(re.defaultRestSec) + "]: ",
+                re.defaultRestSec);
+
+            activeProfile->addSetToWorkout(wId, re.exercise.getId(),
+                                           reps, weight, rest);
+        }
+    }
+
+    activeProfile->detectPRs(wId);
+
+    printSeparator('=');
+    std::cout << "Workout complete!\n";
+    std::cout << *activeProfile->findWorkout(wId) << "\n";
+
+    const auto &prs = activeProfile->getPRs();
+    bool anyNew = false;
+    for (const auto &pr : prs)
+    {
+        if (pr.getDate() == date)
+        {
+            if (!anyNew)
+            {
+                std::cout << "PRs set today:\n";
+                anyNew = true;
+            }
+            std::cout << "  " << pr << "\n";
+        }
+    }
+}
+
 void FitnessTracker::menuRoutines()
 {
     while (true)
@@ -567,9 +650,10 @@ void FitnessTracker::menuWorkouts()
         printSeparator();
         std::cout << "  1. List workouts\n";
         std::cout << "  2. Add workout\n";
-        std::cout << "  3. View workout\n";
-        std::cout << "  4. Add set to workout\n";
-        std::cout << "  5. Remove workout\n";
+        std::cout << "  3. Start workout from routine\n";
+        std::cout << "  4. View workout\n";
+        std::cout << "  5. Add set to workout\n";
+        std::cout << "  6. Remove workout\n";
         std::cout << "  0. Back\n";
         printSeparator('=');
 
@@ -583,12 +667,15 @@ void FitnessTracker::menuWorkouts()
             actionAddWorkout();
             break;
         case 3:
-            actionViewWorkout();
+            actionStartWorkoutFromRoutine();
             break;
         case 4:
-            actionAddSetToWorkout();
+            actionViewWorkout();
             break;
         case 5:
+            actionAddSetToWorkout();
+            break;
+        case 6:
             actionRemoveWorkout();
             break;
         case 0:
