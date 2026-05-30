@@ -36,6 +36,7 @@ public:
     void removeSet(int setId);
     float getTotalVolume() const;
     int getTotalReps() const;
+    void setDurationMin(int durationMin) { this->durationMin = durationMin; }
 
     std::string serialize() const override;
 

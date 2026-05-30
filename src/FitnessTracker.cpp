@@ -22,6 +22,16 @@ void FitnessTracker::clearScreen()
 #endif
 }
 
+bool FitnessTracker::promptConfirm(const std::string &prompt, bool defaultYes)
+{
+    std::string input;
+    std::cout << prompt;
+    std::getline(std::cin, input);
+    if (input.empty())
+        return defaultYes;
+    return (input == "y" || input == "Y");
+}
+
 int FitnessTracker::promptInt(const std::string &prompt)
 {
     int val;
@@ -54,6 +64,32 @@ int FitnessTracker::promptIntDefault(const std::string &prompt, int defaultVal)
     {
         std::cout << "Invalid input, using default: " << defaultVal << "\n";
         return defaultVal;
+    }
+}
+
+int FitnessTracker::promptIntOptional(const std::string &prompt, bool &skipped)
+{
+    while (true)
+    {
+        std::string input;
+        std::cout << prompt;
+        std::getline(std::cin, input);
+
+        if (input.empty())
+        {
+            skipped = true;
+            return 0;
+        }
+
+        try
+        {
+            skipped = false;
+            return std::stoi(input);
+        }
+        catch (...)
+        {
+            std::cout << "Invalid input, try again.\n";
+        }
     }
 }
 
@@ -437,10 +473,34 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
     }
 
     std::string date = promptDate("Date (YYYY-MM-DD): ");
-    int duration = promptInt("Estimated duration (minutes): ");
     std::string notes = promptString("Notes (optional): ");
 
-    Workout &w = activeProfile->addWorkout(date, duration, notes);
+    bool autoTime = false;
+    int fixedDuration = 0;
+
+    std::string durInput;
+    std::cout << "Duration in minutes (Enter to calculate automatically): ";
+    std::getline(std::cin, durInput);
+
+    if (durInput.empty())
+    {
+        autoTime = true;
+    }
+    else
+    {
+        try
+        {
+            fixedDuration = std::stoi(durInput);
+        }
+        catch (...)
+        {
+            std::cout << "Invalid input, calculating automatically.\n";
+            autoTime = true;
+        }
+    }
+
+    time_t startTime = time(0);
+    Workout &w = activeProfile->addWorkout(date, fixedDuration, notes);
     int wId = w.getId();
 
     printSeparator('=');
@@ -450,14 +510,34 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
     {
         printSeparator();
         std::cout << "  " << re.exercise.getName()
-                  << " — " << re.sets << " sets\n";
+                  << " - " << re.sets << " sets\n";
         printSeparator();
 
         for (int i = 1; i <= re.sets; i++)
         {
             std::cout << "  Set " << i << ":\n";
 
-            int reps = promptInt("    Reps: ");
+            bool skipped = false;
+            int reps = promptIntOptional("    Reps or time (Enter to skip remaining): ", skipped);
+
+            if (skipped)
+            {
+                bool confirm = promptConfirm(
+                    "    Skip remaining sets for " + re.exercise.getName() +
+                        "? [Y/n]: ",
+                    true);
+                if (confirm)
+                {
+                    break;
+                }
+                else
+                {
+                    // re-prompt this same set
+                    i--;
+                    continue;
+                }
+            }
+
             float weight = promptFloat("    Weight (kg): ");
             int rest = promptIntDefault(
                 "    Rest (s) [" + std::to_string(re.defaultRestSec) + "]: ",
@@ -472,6 +552,20 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
 
     printSeparator('=');
     std::cout << "Workout complete!\n";
+
+    if (autoTime)
+    {
+        time_t endTime = time(0);
+        int computedMinutes = static_cast<int>(difftime(endTime, startTime) / 60);
+        if (computedMinutes < 1)
+            computedMinutes = 1;
+        activeProfile->findWorkout(wId)->setDurationMin(computedMinutes);
+        std::cout << "Duration: " << computedMinutes << " min\n";
+    }
+    else
+    {
+        std::cout << "Duration: " << fixedDuration << " min\n";
+    }
     std::cout << *activeProfile->findWorkout(wId) << "\n";
 
     const auto &prs = activeProfile->getPRs();

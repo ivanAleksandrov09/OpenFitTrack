@@ -112,7 +112,7 @@ void UserProfile::detectPRs(int workoutId)
 
         if (it == prs.end())
         {
-            // no PR yet — this is the first record
+            // no PR yet - this is the first record
             prs.emplace_back(nextId++, getCurrentDate(),
                              ws.exercise, newWeight, newReps, w->getDate());
             std::cout << "  New PR: " << prs.back() << "\n";

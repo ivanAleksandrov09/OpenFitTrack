@@ -47,8 +47,10 @@ private:
     void actionCreateProfile();
 
     // helpers
+    bool promptConfirm(const std::string &prompt, bool defaultYes = true);
     int promptInt(const std::string &prompt);
     int promptIntDefault(const std::string &prompt, int defaultVal);
+    int promptIntOptional(const std::string &prompt, bool &skipped);
     float promptFloat(const std::string &prompt);
     std::string promptString(const std::string &prompt);
     std::string promptDate(const std::string &prompt);
