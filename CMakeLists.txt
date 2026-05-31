@@ -9,3 +9,7 @@ include_directories(include)
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(FitnessTracker ${SOURCES})
+
+if(WIN32)
+	target_compile_definitions(FitnessTracker PRIVATE _WIN32_WINNT=0x0600)
+endif()

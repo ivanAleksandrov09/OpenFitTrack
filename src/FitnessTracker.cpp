@@ -1,5 +1,7 @@
 #include "FitnessTracker.h"
+#include "CLI.h"
 #include <iostream>
+#include <sstream>
 #include <limits>
 #include <algorithm>
 
@@ -10,22 +12,23 @@ FitnessTracker::FitnessTracker()
 
 void FitnessTracker::printSeparator(char c, int width)
 {
-    std::cout << std::string(width, c) << "\n";
+    if (c == '=')
+        CLI::separatorThick();
+    else if (c == '-')
+        CLI::separatorThin();
+    else
+        std::cout << std::string(width, c) << "\n";
 }
 
 void FitnessTracker::clearScreen()
 {
-#ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
+    CLI::clear();
 }
 
 bool FitnessTracker::promptConfirm(const std::string &prompt, bool defaultYes)
 {
     std::string input;
-    std::cout << prompt;
+    CLI::prompt(prompt);
     std::getline(std::cin, input);
     if (input.empty())
         return defaultYes;
@@ -37,22 +40,22 @@ int FitnessTracker::promptInt(const std::string &prompt)
     int val;
     while (true)
     {
-        std::cout << prompt;
+        CLI::prompt(prompt);
         if (std::cin >> val)
         {
-            std::cin.ignore();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             return val;
         }
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "Invalid input, try again.\n";
+        CLI::warning("Invalid input, try again.");
     }
 }
 
 int FitnessTracker::promptIntDefault(const std::string &prompt, int defaultVal)
 {
     std::string input;
-    std::cout << prompt;
+    CLI::prompt(prompt);
     std::getline(std::cin, input);
     if (input.empty())
         return defaultVal;
@@ -62,7 +65,7 @@ int FitnessTracker::promptIntDefault(const std::string &prompt, int defaultVal)
     }
     catch (...)
     {
-        std::cout << "Invalid input, using default: " << defaultVal << "\n";
+        CLI::warning("Invalid input, using default: " + std::to_string(defaultVal));
         return defaultVal;
     }
 }
@@ -72,7 +75,7 @@ int FitnessTracker::promptIntOptional(const std::string &prompt, bool &skipped)
     while (true)
     {
         std::string input;
-        std::cout << prompt;
+        CLI::prompt(prompt);
         std::getline(std::cin, input);
 
         if (input.empty())
@@ -88,7 +91,7 @@ int FitnessTracker::promptIntOptional(const std::string &prompt, bool &skipped)
         }
         catch (...)
         {
-            std::cout << "Invalid input, try again.\n";
+            CLI::warning("Invalid input, try again.");
         }
     }
 }
@@ -98,22 +101,22 @@ float FitnessTracker::promptFloat(const std::string &prompt)
     float val;
     while (true)
     {
-        std::cout << prompt;
+        CLI::prompt(prompt);
         if (std::cin >> val)
         {
-            std::cin.ignore();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             return val;
         }
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "Invalid input, try again.\n";
+        CLI::warning("Invalid input, try again.");
     }
 }
 
 std::string FitnessTracker::promptString(const std::string &prompt)
 {
     std::string val;
-    std::cout << prompt;
+    CLI::prompt(prompt);
     std::getline(std::cin, val);
     return val;
 }
@@ -126,7 +129,7 @@ std::string FitnessTracker::promptDate(const std::string &prompt)
 
         if (val.size() != 10 || val[4] != '-' || val[7] != '-')
         {
-            std::cout << "Invalid format. Use YYYY-MM-DD.\n";
+            CLI::warning("Invalid format. Use YYYY-MM-DD.");
             continue;
         }
 
@@ -139,13 +142,13 @@ std::string FitnessTracker::promptDate(const std::string &prompt)
         }
         catch (...)
         {
-            std::cout << "Invalid date.\n";
+            CLI::warning("Invalid date.");
             continue;
         }
 
         if (month < 1 || month > 12)
         {
-            std::cout << "Month must be 1-12.\n";
+            CLI::warning("Month must be 1-12.");
             continue;
         }
 
@@ -156,7 +159,7 @@ std::string FitnessTracker::promptDate(const std::string &prompt)
 
         if (day < 1 || day > daysInMonth[month - 1])
         {
-            std::cout << "Invalid day for that month.\n";
+            CLI::warning("Invalid day for that month.");
             continue;
         }
 
@@ -170,14 +173,14 @@ void FitnessTracker::actionCreateProfile()
     std::string name = promptString("Profile name: ");
     if (fileManager.exists(name))
     {
-        std::cout << "Profile already exists. Loading it instead.\n";
+        CLI::info("Profile already exists. Loading it instead.");
         profiles.push_back(fileManager.load(name));
     }
     else
     {
         int age = promptInt("Age: ");
         profiles.emplace_back((int)profiles.size() + 1, name, age);
-        std::cout << "Profile created: " << name << "\n";
+        CLI::success("Profile created: " + name);
     }
     activeProfile = &profiles.back();
 }
@@ -186,22 +189,22 @@ void FitnessTracker::actionSwitchProfile()
 {
     if (profiles.empty())
     {
-        std::cout << "No profiles loaded.\n";
+        CLI::warning("No profiles loaded.");
         return;
     }
-    printSeparator();
+    std::vector<MenuItem> items;
     for (size_t i = 0; i < profiles.size(); i++)
-        std::cout << "  " << i + 1 << ". " << profiles[i].getName() << "\n";
-    printSeparator();
+        items.push_back({static_cast<int>(i + 1), profiles[i].getName(), ""});
+    CLI::printMenu("Select Profile", items);
 
     int choice = promptInt("Select profile: ");
     if (choice < 1 || choice > (int)profiles.size())
     {
-        std::cout << "Invalid choice.\n";
+        CLI::warning("Invalid choice.");
         return;
     }
     activeProfile = &profiles[choice - 1];
-    std::cout << "Switched to: " << activeProfile->getName() << "\n";
+    CLI::success("Switched to: " + activeProfile->getName());
 }
 
 // ── Exercise actions ───────────────────────────────────────────────────────
@@ -211,13 +214,17 @@ void FitnessTracker::actionListExercises()
     const auto &exercises = activeProfile->getExercises();
     if (exercises.empty())
     {
-        std::cout << "No exercises yet.\n";
+        CLI::warning("No exercises yet.");
         return;
     }
-    printSeparator();
+    CLI::separatorThin();
     for (const auto &e : exercises)
-        std::cout << "  " << e << "\n";
-    printSeparator();
+    {
+        std::ostringstream oss;
+        oss << e;
+        CLI::printBullet(oss.str());
+    }
+    CLI::separatorThin();
 }
 
 void FitnessTracker::actionAddExercise()
@@ -228,7 +235,9 @@ void FitnessTracker::actionAddExercise()
 
     auto &e = activeProfile->addExercise(name, muscleGroup,
                                          static_cast<ExerciseType>(type));
-    std::cout << "Added: " << e << "\n";
+    std::ostringstream oss;
+    oss << e;
+    CLI::success("Added: " + oss.str());
 }
 
 void FitnessTracker::actionRemoveExercise()
@@ -237,12 +246,12 @@ void FitnessTracker::actionRemoveExercise()
     int id = promptInt("Exercise ID to remove: ");
     if (activeProfile->findExercise(id) == nullptr)
     {
-        std::cout << "Invalid exercise ID " << id << "\n";
+        CLI::error("Exercise not found.");
         return;
     }
 
     activeProfile->removeExercise(id);
-    std::cout << "Removed exercise #" << id << "\n";
+    CLI::success("Removed exercise #" + std::to_string(id));
 }
 
 // ── Workout actions ────────────────────────────────────────────────────────
@@ -252,16 +261,15 @@ void FitnessTracker::actionListWorkouts()
     const auto &workouts = activeProfile->getWorkouts();
     if (workouts.empty())
     {
-        std::cout << "No workouts yet.\n";
+        CLI::warning("No workouts yet.");
         return;
     }
-    printSeparator();
+    CLI::separatorThin();
     for (const auto &w : workouts)
-        std::cout << "  [#" << w.getId() << "] "
-                  << w.getDate() << " | "
-                  << w.getDurationMin() << " min | "
-                  << w.getSets().size() << " sets\n";
-    printSeparator();
+        CLI::printRow("[#" + std::to_string(w.getId()) + "] " + w.getDate(),
+                      std::to_string(w.getDurationMin()) + " min | " +
+                          std::to_string(w.getSets().size()) + " sets");
+    CLI::separatorThin();
 }
 
 void FitnessTracker::actionAddWorkout()
@@ -271,7 +279,7 @@ void FitnessTracker::actionAddWorkout()
     std::string notes = promptString("Notes: ");
 
     auto &w = activeProfile->addWorkout(date, duration, notes);
-    std::cout << "Workout created: #" << w.getId() << "\n";
+    CLI::success("Workout created: #" + std::to_string(w.getId()));
 }
 
 void FitnessTracker::actionRemoveWorkout()
@@ -280,12 +288,12 @@ void FitnessTracker::actionRemoveWorkout()
     int id = promptInt("Workout ID to remove: ");
     if (activeProfile->findWorkout(id) == nullptr)
     {
-        std::cout << "Invalid workout ID # " << id << "\n";
+        CLI::error("Workout not found.");
         return;
     }
 
     activeProfile->removeWorkout(id);
-    std::cout << "Removed workout #" << id << "\n";
+    CLI::success("Removed workout #" + std::to_string(id));
 }
 
 void FitnessTracker::actionViewWorkout()
@@ -295,10 +303,12 @@ void FitnessTracker::actionViewWorkout()
     Workout *w = activeProfile->findWorkout(id);
     if (!w)
     {
-        std::cout << "Not found.\n";
+        CLI::error("Workout not found.");
         return;
     }
-    std::cout << *w << "\n";
+    std::ostringstream oss;
+    oss << *w;
+    CLI::info(oss.str());
 }
 
 void FitnessTracker::actionAddSetToWorkout()
@@ -308,7 +318,7 @@ void FitnessTracker::actionAddSetToWorkout()
 
     if (activeProfile->findWorkout(wId) == nullptr)
     {
-        std::cout << "Invalid workout ID # " << wId << "\n";
+        CLI::error("Workout not found.");
         return;
     }
 
@@ -317,7 +327,7 @@ void FitnessTracker::actionAddSetToWorkout()
 
     if (activeProfile->findExercise(eId) == nullptr)
     {
-        std::cout << "Invalid exercise ID # " << eId << "\n";
+        CLI::error("Exercise not found.");
         return;
     }
 
@@ -327,7 +337,7 @@ void FitnessTracker::actionAddSetToWorkout()
 
     activeProfile->addSetToWorkout(wId, eId, reps, weight, restSec);
     activeProfile->detectPRs(wId);
-    std::cout << "Set added.\n";
+    CLI::success("Set added.");
 }
 
 // ── Routine actions ───────────────────────────────────────────────────────────────
@@ -337,14 +347,14 @@ void FitnessTracker::actionListRoutines()
     const auto &routines = activeProfile->getRoutines();
     if (routines.empty())
     {
-        std::cout << "No routines yet.\n";
+        CLI::warning("No routines yet.");
         return;
     }
-    printSeparator();
+    CLI::separatorThin();
     for (const auto &r : routines)
-        std::cout << "  [#" << r.getId() << "] " << r.getName()
-                  << " - " << r.getEntries().size() << " exercises\n";
-    printSeparator();
+        CLI::printRow("[#" + std::to_string(r.getId()) + "] " + r.getName(),
+                      std::to_string(r.getEntries().size()) + " exercises");
+    CLI::separatorThin();
 }
 
 void FitnessTracker::actionViewRoutine()
@@ -354,22 +364,24 @@ void FitnessTracker::actionViewRoutine()
     Routine *r = activeProfile->findRoutine(id);
     if (!r)
     {
-        std::cout << "Not found.\n";
+        CLI::error("Routine not found.");
         return;
     }
-    std::cout << *r << "\n";
+    std::ostringstream oss;
+    oss << *r;
+    CLI::info(oss.str());
 }
 
 void FitnessTracker::actionCreateRoutine()
 {
     std::string name = promptString("Routine name: ");
     Routine &r = activeProfile->addRoutine(name);
-    std::cout << "Routine created: #" << r.getId() << " " << r.getName() << "\n";
+    CLI::success("Routine created: #" + std::to_string(r.getId()) + " " + r.getName());
 
     while (true)
     {
         actionListExercises();
-        std::cout << "  0. Done adding exercises\n";
+        CLI::printItem("0", "Done adding exercises");
         int eId = promptInt("Exercise ID to add (0 to finish): ");
         if (eId == 0)
             break;
@@ -377,7 +389,7 @@ void FitnessTracker::actionCreateRoutine()
         Exercise *e = activeProfile->findExercise(eId);
         if (!e)
         {
-            std::cout << "Exercise not found.\n";
+            CLI::error("Exercise not found.");
             continue;
         }
 
@@ -385,12 +397,14 @@ void FitnessTracker::actionCreateRoutine()
         int restSec = promptInt("Default rest (seconds): ");
 
         activeProfile->addExerciseToRoutine(r.getId(), eId, sets, restSec);
-        std::cout << "  Added: " << e->getName()
-                  << " x" << sets << " sets | rest: " << restSec << "s\n";
+        CLI::info("Added: " + e->getName() + " x" + std::to_string(sets) +
+                  " sets | rest: " + std::to_string(restSec) + "s");
     }
 
-    std::cout << "\nRoutine saved:\n"
-              << r << "\n";
+    std::ostringstream oss;
+    oss << r;
+    CLI::success("Routine saved.");
+    CLI::info(oss.str());
 }
 
 void FitnessTracker::actionRemoveRoutine()
@@ -401,12 +415,12 @@ void FitnessTracker::actionRemoveRoutine()
     Routine *r = activeProfile->findRoutine(id);
     if (!r)
     {
-        std::cout << "Not found\n";
+        CLI::error("Routine not found.");
         return;
     }
 
     activeProfile->removeRoutine(id);
-    std::cout << "Removed routine #" << id << "\n";
+    CLI::success("Removed routine #" + std::to_string(id));
 }
 
 void FitnessTracker::actionAddExerciseToRoutine()
@@ -416,7 +430,7 @@ void FitnessTracker::actionAddExerciseToRoutine()
     Routine *r = activeProfile->findRoutine(rId);
     if (!r)
     {
-        std::cout << "Not found.\n";
+        CLI::error("Routine not found.");
         return;
     }
 
@@ -425,7 +439,7 @@ void FitnessTracker::actionAddExerciseToRoutine()
     Exercise *e = activeProfile->findExercise(eId);
     if (!e)
     {
-        std::cout << "Not found.\n";
+        CLI::error("Exercise not found.");
         return;
     }
 
@@ -433,7 +447,7 @@ void FitnessTracker::actionAddExerciseToRoutine()
     int restSec = promptInt("Default rest (seconds): ");
 
     activeProfile->addExerciseToRoutine(rId, eId, sets, restSec);
-    std::cout << "Added " << e->getName() << " to " << r->getName() << "\n";
+    CLI::success("Added " + e->getName() + " to " + r->getName());
 }
 
 void FitnessTracker::actionRemoveExerciseFromRoutine()
@@ -443,7 +457,7 @@ void FitnessTracker::actionRemoveExerciseFromRoutine()
     Routine *r = activeProfile->findRoutine(rId);
     if (!r)
     {
-        std::cout << "Not found.\n";
+        CLI::error("Routine not found.");
         return;
     }
 
@@ -453,12 +467,12 @@ void FitnessTracker::actionRemoveExerciseFromRoutine()
     Exercise *e = activeProfile->findExercise(eId);
     if (!e)
     {
-        std::cout << "Not found.\n";
+        CLI::error("Exercise not found.");
         return;
     }
 
     activeProfile->removeExerciseFromRoutine(rId, eId);
-    std::cout << "Removed exercise #" << eId << " from routine.\n";
+    CLI::success("Removed exercise #" + std::to_string(eId) + " from routine.");
 }
 
 void FitnessTracker::actionStartWorkoutFromRoutine()
@@ -468,7 +482,7 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
     Routine *routine = activeProfile->findRoutine(rId);
     if (!routine)
     {
-        std::cout << "Not found.\n";
+        CLI::error("Routine not found.");
         return;
     }
 
@@ -479,7 +493,7 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
     int fixedDuration = 0;
 
     std::string durInput;
-    std::cout << "Duration in minutes (Enter to calculate automatically): ";
+    CLI::prompt("Duration in minutes (Enter to calculate automatically): ");
     std::getline(std::cin, durInput);
 
     if (durInput.empty())
@@ -494,7 +508,7 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
         }
         catch (...)
         {
-            std::cout << "Invalid input, calculating automatically.\n";
+            CLI::warning("Invalid input, calculating automatically.");
             autoTime = true;
         }
     }
@@ -504,18 +518,17 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
     int wId = w.getId();
 
     printSeparator('=');
-    std::cout << "Starting: " << routine->getName() << "\n";
+    CLI::info("Starting: " + routine->getName());
 
     for (const auto &re : routine->getEntries())
     {
         printSeparator();
-        std::cout << "  " << re.exercise.getName()
-                  << " - " << re.sets << " sets\n";
+        CLI::printRow(re.exercise.getName(), std::to_string(re.sets) + " sets");
         printSeparator();
 
         for (int i = 1; i <= re.sets; i++)
         {
-            std::cout << "  Set " << i << ":\n";
+            CLI::printItem(std::to_string(i), "Set");
 
             bool skipped = false;
             int reps = promptIntOptional("    Reps or time (Enter to skip remaining): ", skipped);
@@ -538,7 +551,11 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
                 }
             }
 
-            float weight = promptFloat("    Weight (kg): ");
+            int weight = 0;
+            if (re.exercise.getType() == ExerciseType::STRENGTH)
+            {
+                weight = promptFloat("    Weight (kg): ");
+            }
             int rest = promptIntDefault(
                 "    Rest (s) [" + std::to_string(re.defaultRestSec) + "]: ",
                 re.defaultRestSec);
@@ -551,7 +568,7 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
     activeProfile->detectPRs(wId);
 
     printSeparator('=');
-    std::cout << "Workout complete!\n";
+    CLI::success("Workout complete!");
 
     if (autoTime)
     {
@@ -560,13 +577,17 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
         if (computedMinutes < 1)
             computedMinutes = 1;
         activeProfile->findWorkout(wId)->setDurationMin(computedMinutes);
-        std::cout << "Duration: " << computedMinutes << " min\n";
+        CLI::info("Duration: " + std::to_string(computedMinutes) + " min");
     }
     else
     {
-        std::cout << "Duration: " << fixedDuration << " min\n";
+        CLI::info("Duration: " + std::to_string(fixedDuration) + " min");
     }
-    std::cout << *activeProfile->findWorkout(wId) << "\n";
+    {
+        std::ostringstream oss;
+        oss << *activeProfile->findWorkout(wId);
+        CLI::info(oss.str());
+    }
 
     const auto &prs = activeProfile->getPRs();
     bool anyNew = false;
@@ -576,10 +597,12 @@ void FitnessTracker::actionStartWorkoutFromRoutine()
         {
             if (!anyNew)
             {
-                std::cout << "PRs set today:\n";
+                CLI::pr("PRs set today");
                 anyNew = true;
             }
-            std::cout << "  " << pr << "\n";
+            std::ostringstream oss;
+            oss << pr;
+            CLI::pr(oss.str());
         }
     }
 }
@@ -588,17 +611,15 @@ void FitnessTracker::menuRoutines()
 {
     while (true)
     {
-        printSeparator('=');
-        std::cout << "  Routines\n";
-        printSeparator();
-        std::cout << "  1. List routines\n";
-        std::cout << "  2. View routine\n";
-        std::cout << "  3. Create routine\n";
-        std::cout << "  4. Add exercise to routine\n";
-        std::cout << "  5. Remove exercise from routine\n";
-        std::cout << "  6. Remove routine\n";
-        std::cout << "  0. Back\n";
-        printSeparator('=');
+        CLI::printMenu("Routines", {
+                                       {1, "List routines", ""},
+                                       {2, "View routine", ""},
+                                       {3, "Create routine", ""},
+                                       {4, "Add exercise to routine", ""},
+                                       {5, "Remove exercise from routine", ""},
+                                       {6, "Remove routine", ""},
+                                       {0, "Back", ""},
+                                   });
 
         int choice = promptInt("> ");
         switch (choice)
@@ -624,7 +645,7 @@ void FitnessTracker::menuRoutines()
         case 0:
             return;
         default:
-            std::cout << "Invalid option.\n";
+            CLI::warning("Invalid option.");
         }
     }
 }
@@ -639,27 +660,30 @@ void FitnessTracker::menuProgress()
     Exercise *e = activeProfile->findExercise(eId);
     if (!e)
     {
-        std::cout << "Exercise not found.\n";
+        CLI::error("Exercise not found.");
         return;
     }
 
     auto history = activeProfile->getProgressForExercise(eId);
     if (history.empty())
     {
-        std::cout << "No data yet.\n";
+        CLI::warning("No data yet.");
         return;
     }
 
-    printSeparator('=');
-    std::cout << "Progress: " << e->getName() << "\n";
-    printSeparator();
+    CLI::printHeader("Progress: " + e->getName());
+    float maxWeight = history.back().second;
     for (const auto &[date, weight] : history)
-        std::cout << "  " << date << "  ->  " << weight << " kg\n";
+        CLI::printProgressBar(date, weight, maxWeight);
 
     const PersonalRecord *pr = activeProfile->getPRForExercise(eId);
     if (pr)
-        std::cout << "\nCurrent PR: " << *pr << "\n";
-    printSeparator('=');
+    {
+        std::ostringstream oss;
+        oss << *pr;
+        CLI::pr("Current PR: " + oss.str());
+    }
+    CLI::separatorThick();
 }
 
 // ── Weekly summary ─────────────────────────────────────────────────────────
@@ -681,23 +705,33 @@ void FitnessTracker::menuWeeklySummary()
 
     auto s = activeProfile->getWeeklySummary(startBuf, endBuf);
 
-    printSeparator('=');
-    std::cout << "Weekly Summary: " << s.weekStart << " to " << s.weekEnd << "\n";
-    printSeparator();
-    std::cout << "  Workouts : " << s.totalWorkouts << "\n";
-    std::cout << "  Volume   : " << s.totalVolume << " kg\n";
-    std::cout << "  Reps     : " << s.totalReps << "\n";
-    std::cout << "  Muscles  : ";
-    for (const auto &m : s.musclesHit)
-        std::cout << m << "  ";
-    std::cout << "\n";
+    std::string muscles;
+    for (size_t i = 0; i < s.musclesHit.size(); i++)
+    {
+        if (i)
+            muscles += "  ";
+        muscles += s.musclesHit[i];
+    }
+
+    CLI::printSummaryBox("Weekly Summary - " + s.weekStart + " to " + s.weekEnd, {
+                                                                                     {"Workouts", std::to_string(s.totalWorkouts)},
+                                                                                     {"Volume", std::to_string(s.totalVolume) + " kg"},
+                                                                                     {"Total reps", std::to_string(s.totalReps)},
+                                                                                     {"Muscles", muscles},
+                                                                                 });
+
     if (!s.prsBeaten.empty())
     {
-        std::cout << "  PRs set  :\n";
+        CLI::separatorThin();
+        CLI::info("PRs set this week");
         for (const auto &pr : s.prsBeaten)
-            std::cout << "    " << pr << "\n";
+        {
+            std::ostringstream oss;
+            oss << pr;
+            CLI::pr(oss.str());
+        }
+        CLI::separatorThin();
     }
-    printSeparator('=');
 }
 
 // ── Sub-menus ──────────────────────────────────────────────────────────────
@@ -706,14 +740,12 @@ void FitnessTracker::menuExercises()
 {
     while (true)
     {
-        printSeparator('=');
-        std::cout << "  Exercises\n";
-        printSeparator();
-        std::cout << "  1. List exercises\n";
-        std::cout << "  2. Add exercise\n";
-        std::cout << "  3. Remove exercise\n";
-        std::cout << "  0. Back\n";
-        printSeparator('=');
+        CLI::printMenu("Exercises", {
+                                        {1, "List exercises", ""},
+                                        {2, "Add exercise", ""},
+                                        {3, "Remove exercise", ""},
+                                        {0, "Back", ""},
+                                    });
 
         int choice = promptInt("> ");
         switch (choice)
@@ -730,7 +762,7 @@ void FitnessTracker::menuExercises()
         case 0:
             return;
         default:
-            std::cout << "Invalid option.\n";
+            CLI::warning("Invalid option.");
         }
     }
 }
@@ -739,17 +771,15 @@ void FitnessTracker::menuWorkouts()
 {
     while (true)
     {
-        printSeparator('=');
-        std::cout << "  Workouts\n";
-        printSeparator();
-        std::cout << "  1. List workouts\n";
-        std::cout << "  2. Add workout\n";
-        std::cout << "  3. Start workout from routine\n";
-        std::cout << "  4. View workout\n";
-        std::cout << "  5. Add set to workout\n";
-        std::cout << "  6. Remove workout\n";
-        std::cout << "  0. Back\n";
-        printSeparator('=');
+        CLI::printMenu("Workouts", {
+                                       {1, "List workouts", ""},
+                                       {2, "Add workout", ""},
+                                       {3, "Start workout from routine", ""},
+                                       {4, "View workout", ""},
+                                       {5, "Add set to workout", ""},
+                                       {6, "Remove workout", ""},
+                                       {0, "Back", ""},
+                                   });
 
         int choice = promptInt("> ");
         switch (choice)
@@ -775,7 +805,7 @@ void FitnessTracker::menuWorkouts()
         case 0:
             return;
         default:
-            std::cout << "Invalid option.\n";
+            CLI::warning("Invalid option.");
         }
     }
 }
@@ -786,28 +816,25 @@ void FitnessTracker::menuMain()
 {
     while (true)
     {
-        printSeparator('=');
-        std::cout << "  Fitness Tracker";
+        std::string title = "Fitness Tracker";
         if (activeProfile)
-            std::cout << "  [" << activeProfile->getName() << "]\n";
-        else
-            std::cout << "\n";
-        printSeparator();
-        std::cout << "  1. Exercises\n";
-        std::cout << "  2. Workouts\n";
-        std::cout << "  3. Routines\n";
-        std::cout << "  4. Progress\n";
-        std::cout << "  5. Weekly summary\n";
-        std::cout << "  6. Switch profile\n";
-        std::cout << "  7. Save\n";
-        std::cout << "  0. Exit\n";
-        printSeparator('=');
+            title += "  [" + activeProfile->getName() + "]";
+        CLI::printMenu(title, {
+                                  {1, "Exercises", ""},
+                                  {2, "Workouts", ""},
+                                  {3, "Routines", ""},
+                                  {4, "Progress", ""},
+                                  {5, "Weekly summary", ""},
+                                  {6, "Switch profile", ""},
+                                  {7, "Save", ""},
+                                  {0, "Exit", ""},
+                              });
 
         int choice = promptInt("> ");
 
         if (choice != 0 && !activeProfile && choice != 5)
         {
-            std::cout << "No active profile. Please select or create one first.\n";
+            CLI::warning("No active profile. Please select or create one first.");
             continue;
         }
 
@@ -837,35 +864,35 @@ void FitnessTracker::menuMain()
         case 0:
             if (activeProfile)
                 fileManager.save(*activeProfile);
-            std::cout << "Goodbye.\n";
+            CLI::info("Goodbye.");
             return;
         default:
-            std::cout << "Invalid option.\n";
+            CLI::warning("Invalid option.");
         }
     }
 }
 
 void FitnessTracker::run()
 {
-    std::cout << "Welcome to Fitness Tracker\n";
+    CLI::printBanner();
+    CLI::info("Welcome to Fitness Tracker");
 
     // load all existing profiles
     auto savedProfiles = fileManager.listProfiles();
     for (const auto &name : savedProfiles)
     {
-        std::cout << "Loading profile: " << name << "\n";
+        CLI::info("Loading profile: " + name);
         profiles.push_back(fileManager.load(name));
     }
 
     // ask which profile to use
     if (!profiles.empty())
     {
-        printSeparator();
-        std::cout << "Existing profiles:\n";
+        std::vector<MenuItem> items;
         for (size_t i = 0; i < profiles.size(); i++)
-            std::cout << "  " << i + 1 << ". " << profiles[i].getName() << "\n";
-        std::cout << "  " << profiles.size() + 1 << ". Create new profile\n";
-        printSeparator();
+            items.push_back({static_cast<int>(i + 1), profiles[i].getName(), ""});
+        items.push_back({static_cast<int>(profiles.size() + 1), "Create new profile", ""});
+        CLI::printMenu("Existing profiles", items);
 
         int choice = promptInt("Select profile: ");
         if (choice >= 1 && choice <= (int)profiles.size())
@@ -879,7 +906,7 @@ void FitnessTracker::run()
     }
     else
     {
-        std::cout << "No saved profiles found.\n";
+        CLI::warning("No saved profiles found.");
         actionCreateProfile();
     }
 
